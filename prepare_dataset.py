@@ -39,7 +39,7 @@ def prepare():
 
     for image in imlist:
         count += 1
-        if count%10:
+        if count%10==0:
             print(count)
         src = cv2.imread(image)
         output = cv2.resize(src, dsize, interpolation=cv2.INTER_LANCZOS4)
