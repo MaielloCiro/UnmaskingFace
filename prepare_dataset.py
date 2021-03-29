@@ -4,9 +4,9 @@ import os
 import os.path as osp
 
 
-images = "C:\\Users\\cirom\\Desktop\\Laurea magistrale\\Secondo anno\\Primo semestre\\Machine Learning for vision e multimedia\\Project\\colab_masked"
-images_gt = "C:\\Users\\cirom\\Desktop\\Laurea magistrale\\Secondo anno\\Primo semestre\\Machine Learning for vision e multimedia\\Project\\colab_maps"
-#dsize = (256, 256)
+images = "C:\\Users\\user\\Documents\\PoliTo\\2 anno 1 semestre\\Machine learning for vision and multimedia\\PROGETTO\\DATASET\\prova_masked"
+images_gt = "C:\\Users\\user\\Documents\\PoliTo\\2 anno 1 semestre\\Machine learning for vision and multimedia\\PROGETTO\\DATASET\\prova_maps"
+# dsize = (256, 256)
 dsize = (128, 128)
 images_original = []
 images_map = []
@@ -40,7 +40,7 @@ def prepare():
 
     for image in imlist:
         count += 1
-        if count%10==0:
+        if count%5000==0:
             print(count)
         src = cv2.imread(image)
         output = cv2.resize(src, dsize, interpolation=cv2.INTER_LANCZOS4)
@@ -56,7 +56,9 @@ def prepare():
                 images_map.append(norm_image_map)
                 break
 
-    train_images = np.asarray(images_original).reshape(-1,128,128,1)#256
-    gt_images = np.asarray(images_map).reshape(-1,128,128,1)#256
+    # train_images = np.asarray(images_original).reshape(-1,256,256,1)
+    train_images = np.asarray(images_original).reshape(-1,128,128,1)
 
+    # gt_images = np.asarray(images_map).reshape(-1,256,256,1)#256
+    gt_images = np.asarray(images_map).reshape(-1,128,128,1)#256
     return train_images, gt_images
