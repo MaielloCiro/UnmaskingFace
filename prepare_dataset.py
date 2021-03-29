@@ -4,9 +4,10 @@ import os
 import os.path as osp
 
 
-images = "drive/MyDrive/Machine Learning/MASKFACCIA/DATASETS/colab_masked"
-images_gt = "drive/MyDrive/Machine Learning/MASKFACCIA/DATASETS/colab_maps"
-dsize = (256, 256)
+images = "C:\\Users\\cirom\\Desktop\\Laurea magistrale\\Secondo anno\\Primo semestre\\Machine Learning for vision e multimedia\\Project\\colab_masked"
+images_gt = "C:\\Users\\cirom\\Desktop\\Laurea magistrale\\Secondo anno\\Primo semestre\\Machine Learning for vision e multimedia\\Project\\colab_maps"
+#dsize = (256, 256)
+dsize = (128, 128)
 images_original = []
 images_map = []
 
@@ -55,7 +56,7 @@ def prepare():
                 images_map.append(norm_image_map)
                 break
 
-    train_images = np.asarray(images_original).reshape(-1,256,256,1)
-    gt_images = np.asarray(images_map).reshape(-1,256,256,1)
+    train_images = np.asarray(images_original).reshape(-1,128,128,1)#256
+    gt_images = np.asarray(images_map).reshape(-1,128,128,1)#256
 
     return train_images, gt_images

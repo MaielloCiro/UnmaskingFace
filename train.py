@@ -6,7 +6,7 @@ from map_module_model import *
 model = modello()
 x_train, x_gt = prepare()
 print("Preparati i dati")
-history = model.fit(x_train, x_gt, validation_split=0.33, epochs=100, batch_size=32)
+history = model.fit(x_train, x_gt, epochs=5, batch_size=16)
 model.save('prova.h5')
 
 print(history.history.keys())
