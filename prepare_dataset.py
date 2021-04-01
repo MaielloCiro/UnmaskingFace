@@ -2,10 +2,10 @@ import cv2
 import numpy as np
 import os
 import os.path as osp
+import random
 
-
-images = "C:\\Users\\user\\Documents\\PoliTo\\2 anno 1 semestre\\Machine learning for vision and multimedia\\PROGETTO\\DATASET\\prova_masked"
-images_gt = "C:\\Users\\user\\Documents\\PoliTo\\2 anno 1 semestre\\Machine learning for vision and multimedia\\PROGETTO\\DATASET\\prova_maps"
+images = "C:\\Users\\user\\Documents\\PoliTo\\2 anno 1 semestre\\Machine learning for vision and multimedia\\PROGETTO\\DATASET\\dataset_masked"
+images_gt = "C:\\Users\\user\\Documents\\PoliTo\\2 anno 1 semestre\\Machine learning for vision and multimedia\\PROGETTO\\DATASET\\dataset_maps"
 # dsize = (256, 256)
 dsize = (128, 128)
 images_original = []
@@ -33,32 +33,35 @@ def name_check(img_map, img_mask):
         return True
     return False
 
-def prepare():
-    imlist = find_path(images)
-    imlist_gt = find_path(images_gt)
-    count = 0
+# def prepare():
+imlist = find_path(images)
+random.shuffle(imlist)
+imlist_gt = find_path(images_gt)
+count = 0
+print("Pre-for")
 
-    for image in imlist:
-        count += 1
-        if count%5000==0:
-            print(count)
-        src = cv2.imread(image)
-        output = cv2.resize(src, dsize, interpolation=cv2.INTER_LANCZOS4)
-        output = cv2.cvtColor(output, cv2.COLOR_BGR2GRAY)
-        norm_image = cv2.normalize(output, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
-        images_original.append(norm_image)
-        for image_segm in imlist_gt:
-            if name_check(image_segm, image):
-                src_map = cv2.imread(image_segm)
-                output_map = cv2.resize(src_map, dsize, interpolation=cv2.INTER_LANCZOS4)
-                output_map = cv2.cvtColor(output_map, cv2.COLOR_BGR2GRAY)
-                norm_image_map = cv2.normalize(output_map, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
-                images_map.append(norm_image_map)
-                break
+for image in imlist:
+    count += 1
+    if count%100==0:
+        print(count)
+    src = cv2.imread(image)
+    output = cv2.resize(src, dsize, interpolation=cv2.INTER_LANCZOS4)
+    output = cv2.cvtColor(output, cv2.COLOR_BGR2GRAY)
+    norm_image = cv2.normalize(output, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+    images_original.append(norm_image)
+    for image_segm in imlist_gt:
+        if name_check(image_segm, image):
+            src_map = cv2.imread(image_segm)
+            output_map = cv2.resize(src_map, dsize, interpolation=cv2.INTER_LANCZOS4)
+            output_map = cv2.cvtColor(output_map, cv2.COLOR_BGR2GRAY)
+            norm_image_map = cv2.normalize(output_map, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+            images_map.append(norm_image_map)
+            break
 
-    # train_images = np.asarray(images_original).reshape(-1,256,256,1)
-    train_images = np.asarray(images_original).reshape(-1,128,128,1)
+train_images = np.asarray(images_original).reshape(-1,128,128,1)
+np.save("C:\\Users\\user\\Documents\\GitHub\\UnmaskingFace\\train_images", train_images)
 
-    # gt_images = np.asarray(images_map).reshape(-1,256,256,1)#256
-    gt_images = np.asarray(images_map).reshape(-1,128,128,1)#256
-    return train_images, gt_images
+gt_images = np.asarray(images_map).reshape(-1,128,128,1)
+np.save("C:\\Users\\user\\Documents\\GitHub\\UnmaskingFace\\gt_images", gt_images)
+
+    # return train_images, gt_images

@@ -1,6 +1,6 @@
 import tensorflow as tf
 import matplotlib.pyplot as plt
-from prepare_dataset import *
+# from prepare_dataset import *
 from map_module_model import *
 
 gpus = tf.config.experimental.list_physical_devices('GPU')
@@ -12,11 +12,11 @@ if gpus:
     except RuntimeError as e:
         print(e)
 
-
 model = modello()
-x_train, x_gt = prepare()
-print("Preparati i dati")
-history = model.fit(x_train, x_gt, epochs=5, batch_size=32)
+x_train = np.load("C:\\Users\\user\\Documents\\GitHub\\UnmaskingFace\\train_images.npy")
+x_gt = np.load("C:\\Users\\user\\Documents\\GitHub\\UnmaskingFace\\gt_images.npy")
+print("Caricati i dati")
+history = model.fit(x_train, x_gt, validation_split= 0.33, epochs=5, batch_size=32)
 model.save('prova.h5')
 
 print(history.history.keys())
