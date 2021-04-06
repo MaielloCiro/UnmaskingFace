@@ -16,7 +16,7 @@ model = modello()
 x_train = np.load("C:\\Users\\user\\Documents\\GitHub\\UnmaskingFace\\train_images.npy")
 x_gt = np.load("C:\\Users\\user\\Documents\\GitHub\\UnmaskingFace\\gt_images.npy")
 print("Caricati i dati")
-history = model.fit(x_train, x_gt, validation_split= 0.33, epochs=5, batch_size=32)
+history = model.fit(x_train, x_gt, validation_split= 0.2, epochs=5, batch_size=32)
 model.save('prova.h5')
 
 print(history.history.keys())
