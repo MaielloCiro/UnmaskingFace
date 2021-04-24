@@ -1,12 +1,23 @@
-import numpy as np
-from numpy import genfromtxt
+import tensorflow as tf
+from tensorflow.keras.utils import *
+from tensorflow.keras.models import *
+from tensorflow.keras.layers import *
+from GAN_model import *
+import matplotlib.pyplot as plt
 
-my_data1 = np.load("C:\\Users\\user\\Documents\\GitHub\\UnmaskingFace\\train_images1.npy")
-my_data2 = np.load("C:\\Users\\user\\Documents\\GitHub\\UnmaskingFace\\train_images2.npy")
+dsize = (128, 128, 3)
+dmap = (128, 128, 1)
 
-# print(my_data)
+gen = generatore()
+gen.summary()
+path = "C:\\Users\\user\\Documents\\PoliTo\\2 anno 1 semestre\\Machine learning for vision and multimedia\\PROGETTO\\DATASET\\dataset_masked\\149882_surgical.jpg"
+Imask = tf.keras.preprocessing.image.load_img(path, target_size=dsize)
 
-print(my_data1.shape)
-print(my_data2.shape)
-c= np.concatenate((my_data1, my_data2), axis=0)
-print(c.shape)
+path1 = "C:\\Users\\user\\Documents\\PoliTo\\2 anno 1 semestre\\Machine learning for vision and multimedia\\PROGETTO\\DATASET\\dataset_maps\\149882.jpg"
+Imask_map = tf.keras.preprocessing.image.load_img(path1, color_mode='grayscale', target_size=dmap)
+Imask = np.asarray(Imask).reshape((1, 128, 128, 3))
+Imask_map = np.asarray(Imask_map).reshape((1, 128, 128, 1))
+generated_image = gen([Imask, Imask_map], training=False)
+
+plt.imshow(generated_image[0, ...])
+plt.show()

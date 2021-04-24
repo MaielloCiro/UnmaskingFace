@@ -1,13 +1,7 @@
 import tensorflow as tf
-import numpy as np
-import os
-#import skimage.io as io
-#import skimage.transform as trans
 from tensorflow.keras.models import *
 from tensorflow.keras.layers import *
 from tensorflow.keras.optimizers import *
-from tensorflow.keras.callbacks import ModelCheckpoint, LearningRateScheduler
-from tensorflow.keras import backend as keras
 
 def modello():
     # input_size=(256, 256, 1)
@@ -110,6 +104,6 @@ def modello():
     model.summary()
     #plot_model(model, show_shapes=True, to_file='unet_model.png')
 
-    model.compile(optimizer=Adam(lr=1e-4), loss='binary_crossentropy', metrics=['accuracy'])
+    model.compile(optimizer=Adam(), loss='binary_crossentropy', metrics=['accuracy'])
 
     return model
