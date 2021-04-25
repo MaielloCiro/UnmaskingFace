@@ -176,3 +176,12 @@ def prepare_input_disc_mask(x):
     secondmul = Multiply()([Igt_Iedit, Imask_map])
     Imask_region = Add()([firstmul, secondmul])
     return Imask_region
+
+def vgg19_model():
+    selected_layers = ["block3_conv4", "block4_conv4", "block5_conv4"]
+    vgg = tf.keras.applications.VGG19(include_top=False, weights='imagenet', input_shape=(128, 128, 3))
+    vgg.trainable = False
+    outputs = [vgg.get_layer(l).output for l in selected_layers]
+    vgg_model = Model(vgg.input, outputs)
+    #vgg_model.summary()
+    return vgg_model

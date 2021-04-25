@@ -1,4 +1,4 @@
 *.H5
 *.h5
-
+.vscode\*
 Checkpoints\

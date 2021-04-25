@@ -13,7 +13,7 @@ if gpus:
         print(e)
 
 model = modello()
-dataset, dataval = prepare_tf()
+dataset, dataval = prepare_tf_segmentation()
 print("Caricati i dati")
 
 # cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath="C:\\Users\\user\\Documents\\GitHub\\UnmaskingFace\\Checkpoints\\cp{epoch:08d}.h5", save_weights_only=False, save_freq=5*500)
