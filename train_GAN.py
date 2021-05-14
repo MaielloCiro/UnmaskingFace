@@ -18,7 +18,6 @@ if gpus:
     try:
         for gpu in gpus:
             tf.config.experimental.set_memory_growth(gpu, True)
-
     except RuntimeError as e:
         print(e)
 
@@ -31,9 +30,9 @@ LAMBDArc = 100
 gen = generatore()
 #gen.summary()
 disc_whole = disc_whole_region()
-#disc_whole.summary()
+disc_whole.summary()
 disc_mask = disc_mask_region()
-#disc_mask.summary()
+disc_mask.summary()
 vgg_model = vgg19_model()
 print("Modelli caricati")
 
@@ -101,6 +100,7 @@ def first_train_step(input_image, input_map, Igt, epoch, n):
     generator_optimizer.apply_gradients(zip(gradients_of_generator, gen.trainable_variables))
     disc_whole_optimizer.apply_gradients(zip(gradients_of_disc_whole, disc_whole.trainable_variables))
 
+@tf.function
 def second_train_step(input_image, input_map, Igt, epoch, n):
     print("Entrato nel second a epoca "+str(epoch) + " e allo step "+str(n))
     with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_whole_tape, tf.GradientTape() as disc_mask_tape:
@@ -117,7 +117,7 @@ def second_train_step(input_image, input_map, Igt, epoch, n):
         disc_loss_mask = LAMBDA_mask * disc_loss(real_output_mask, fake_output_mask)
         rc_loss = rec_loss(generated_image, Igt)
         perc_loss = perceptual_loss(generated_image, Igt)
-        gen_tot_loss = LAMBDArc*(rc_loss + perc_loss) + LAMBDAwhole*(gen_loss_whole) + LAMBDAmask*(gen_loss_mask)
+        gen_tot_loss = LAMBDArc*(rc_loss + perc_loss) + LAMBDA_whole*(gen_loss_whole) + LAMBDA_mask*(gen_loss_mask)
 
     gradients_of_generator = gen_tape.gradient(gen_tot_loss, gen.trainable_variables)
     gradients_of_disc_whole = disc_whole_tape.gradient(disc_loss_whole, disc_whole.trainable_variables)
@@ -135,8 +135,8 @@ def fit(train_ds, epochs, test_ds):
     first_epochs = int(round(epochs * 0.4))
     for epoch in range(epochs):
         start = time.time()
-        for example_input, example_map, example_target in test_ds.take(1):
-            generate_images(gen, example_input, example_map, example_target)
+        # for example_input, example_map, example_target in test_ds.take(1):
+        #     generate_images(gen, example_input, example_map, example_target)
         print("Epoch: ", epoch)
 
         # Train

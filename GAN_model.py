@@ -137,7 +137,7 @@ def disc_mask_region():
     input_size = (128, 128, 3)
 
     Igt_Iedit = Input(input_size)
-    Imask_map = Input(input_size)
+    Imask_map = Input((128, 128, 1))
     Iinput = Input(input_size)
     input = Lambda(prepare_input_disc_mask)([Igt_Iedit, Imask_map, Iinput])
 
