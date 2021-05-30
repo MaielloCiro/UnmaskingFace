@@ -3,3 +3,5 @@
 .vscode\
 *.json
 Checkpoints\
+Risultati\
+logs\

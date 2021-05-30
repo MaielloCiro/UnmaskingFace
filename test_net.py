@@ -30,14 +30,13 @@ if gpus:
     except RuntimeError as e:
         print(e)
 
-images = "C:\\Users\\user\\Documents\\PoliTo\\2 anno 1 semestre\\Machine learning for vision and multimedia\\PROGETTO\\DATASET\\testmasked"
-images_gt = "C:\\Users\\user\\Documents\\PoliTo\\2 anno 1 semestre\\Machine learning for vision and multimedia\\PROGETTO\\DATASET\\testmaps"
+images = "C:\\Users\\user\\Documents\\PoliTo\\2 anno 1 semestre\\Machine learning for vision and multimedia\\PROGETTO\\DATASET\\testmasked1k"
+images_gt = "C:\\Users\\user\\Documents\\PoliTo\\2 anno 1 semestre\\Machine learning for vision and multimedia\\PROGETTO\\DATASET\\testmaps1k"
 X_test = image_dataset_from_directory(images, image_size=(128, 128), color_mode="grayscale", label_mode=None, shuffle=False, interpolation="lanczos5")
 Y_test = image_dataset_from_directory(images_gt, image_size=(128, 128), color_mode="grayscale", label_mode=None, shuffle=False, interpolation="lanczos5")
 X_test = X_test.map(normalize)
 Y_test = Y_test.map(normalize)
 testset = tf.data.Dataset.zip((X_test , Y_test))
-
 
 
 modello_caricato = load_model("segmentation_model_20k_20epoch.h5")
@@ -53,7 +52,7 @@ for image in prediction:
     count += 1
     binarization(0.01, image)
     image = filter(image)
-    stringa = "Risultati\\Prediction20k\\output_seg_20k_20epoch" + str(count) + ".png"
+    stringa = "C:\\Users\\user\\Documents\\GitHub\\UnmaskingFace\\Risultati\\Segmentation\\ue\\" + str(count) + ".png"
     plt.imshow(image, cmap='gray')
     fig.savefig(stringa)
     print(count)

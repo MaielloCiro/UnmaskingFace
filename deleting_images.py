@@ -2,8 +2,8 @@ import os
 import os.path as osp
 
 #images = "C:\\Users\\user\\Documents\\PoliTo\\2 anno 1 semestre\\Machine learning for vision and multimedia\\PROGETTO\\DATASET\\img_align_celeba"
-images_masked = "C:\\Users\\user\\Documents\\PoliTo\\2 anno 1 semestre\\Machine learning for vision and multimedia\\PROGETTO\\DATASET\\masked"
-images_segmentation = "C:\\Users\\user\\Documents\\PoliTo\\2 anno 1 semestre\\Machine learning for vision and multimedia\\PROGETTO\\DATASET\\unmasked"
+images_unmasked = "C:\\Users\\user\\Documents\\PoliTo\\2 anno 1 semestre\\Machine learning for vision and multimedia\\PROGETTO\\DATASET\\testgt1k\\testset_gt"
+images_masked = "C:\\Users\\user\\Documents\\PoliTo\\2 anno 1 semestre\\Machine learning for vision and multimedia\\PROGETTO\\DATASET\\testmasked1k\\testset_masked"
 counter_mask = 0
 #counter_segment = 0
 counter_elimination = 0
@@ -32,7 +32,7 @@ def name_check(img, img_mask):
 
 #imlist = find_path(images)
 imlist_mask = find_path(images_masked)
-imlist_segmentation = find_path(images_segmentation)
+imlist_segmentation = find_path(images_unmasked)
 
 for image in imlist_segmentation:
     image_masked = imlist_mask[counter_mask]
