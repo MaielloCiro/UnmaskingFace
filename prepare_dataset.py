@@ -34,11 +34,11 @@ images_GAN_gt = "C:\\Users\\user\\Documents\\PoliTo\\2 anno 1 semestre\\Machine 
 
 def prepare_tf_GAN():
     mask_ds = image_dataset_from_directory(images_GAN, image_size=(128, 128), label_mode=None, validation_split=0.05, subset="training", shuffle=True, seed = 1, interpolation="lanczos5", batch_size=16)
-    mask_ds_test = image_dataset_from_directory(images_GAN, image_size=(128, 128), label_mode=None, validation_split=0.05, subset="validation", shuffle=True, seed = 1, interpolation="lanczos5", batch_size=16)
+    mask_ds_test = image_dataset_from_directory(images_GAN, image_size=(128, 128), label_mode=None, validation_split=0.05, subset="validation", shuffle=True, seed = 47, interpolation="lanczos5", batch_size=16)
     map_ds = image_dataset_from_directory(images_GAN_map, image_size=(128, 128), color_mode="grayscale", label_mode=None, validation_split=0.05, subset="training",shuffle=True, seed = 1, interpolation="lanczos5", batch_size=16)
-    map_ds_test = image_dataset_from_directory(images_GAN_map, image_size=(128, 128), color_mode="grayscale", label_mode=None, validation_split=0.05, subset="validation", shuffle=True, seed = 1, interpolation="lanczos5", batch_size=16)
+    map_ds_test = image_dataset_from_directory(images_GAN_map, image_size=(128, 128), color_mode="grayscale", label_mode=None, validation_split=0.05, subset="validation", shuffle=True, seed = 47, interpolation="lanczos5", batch_size=16)
     gt_ds = image_dataset_from_directory(images_GAN_gt, image_size=(128, 128), label_mode=None, validation_split=0.05, subset="training",shuffle=True, seed = 1, interpolation="lanczos5", batch_size=16)
-    gt_ds_test = image_dataset_from_directory(images_GAN_gt, image_size=(128, 128), label_mode=None, validation_split=0.05, subset="validation", shuffle=True, seed = 1, interpolation="lanczos5", batch_size=16)
+    gt_ds_test = image_dataset_from_directory(images_GAN_gt, image_size=(128, 128), label_mode=None, validation_split=0.05, subset="validation", shuffle=True, seed = 47, interpolation="lanczos5", batch_size=16)
     mask_ds = mask_ds.map(normalize_GAN)
     map_ds = map_ds.map(normalize_GAN)
     mask_ds_test = mask_ds_test.map(normalize_GAN)

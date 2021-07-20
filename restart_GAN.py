@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import os
 import time
 import datetime
+import csv
 import tensorflow.keras.backend as K
 from tensorflow.keras.utils import *
 from tensorflow.keras.models import *
@@ -30,6 +31,8 @@ EPOCHS=80
 LAMBDA_whole = 0.3
 LAMBDA_mask = 0.7
 LAMBDArc = 100
+log_dir="C:\\Users\\user\\Documents\\GitHub\\UnmaskingFace\\logs\\"
+summary_writer = tf.summary.create_file_writer(log_dir + "fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
 
 gen = generatore()
 #gen.summary()
@@ -103,12 +106,12 @@ def first_train_step(input_image, input_map, Igt, epoch, n):
     generator_optimizer.apply_gradients(zip(gradients_of_generator, gen.trainable_variables))
     disc_whole_optimizer.apply_gradients(zip(gradients_of_disc_whole, disc_whole.trainable_variables))
 
-    # with summary_writer.as_default():
-    #     tf.summary.scalar('gen_total_loss', gen_tot_loss, step=epoch)
-    #     tf.summary.scalar('gen_gan_loss', generator_loss, step=epoch)
-    #     tf.summary.scalar('gen_rc_loss', rc_loss, step=epoch)
-    #     tf.summary.scalar('gen_perc_loss', perc_loss, step=epoch)
-    #     tf.summary.scalar('disc_whole_loss', discriminator_loss, step=epoch)
+    with summary_writer.as_default():
+        # tf.summary.scalar('gen_total_loss', gen_tot_loss, step=epoch)
+        tf.summary.scalar('gen_gan_loss', generator_loss, step=epoch)
+        # tf.summary.scalar('gen_rc_loss', rc_loss, step=epoch)
+        # tf.summary.scalar('gen_perc_loss', perc_loss, step=epoch)
+        tf.summary.scalar('disc_whole_loss', discriminator_loss, step=epoch)
 
 @tf.function
 def second_train_step(input_image, input_map, Igt, epoch, n):
@@ -136,13 +139,13 @@ def second_train_step(input_image, input_map, Igt, epoch, n):
     disc_whole_optimizer.apply_gradients(zip(gradients_of_disc_whole, disc_whole.trainable_variables))
     disc_mask_optimizer.apply_gradients(zip(gradients_of_disc_mask, disc_mask.trainable_variables))
 
-    # with summary_writer.as_default():
-    #     tf.summary.scalar('gen_total_loss', gen_tot_loss, step=epoch)
-    #     tf.summary.scalar('gen_gan_loss', (gen_loss_mask+gen_loss_whole), step=epoch)
-    #     tf.summary.scalar('gen_rc_loss', rc_loss, step=epoch)
-    #     tf.summary.scalar('gen_perc_loss', perc_loss, step=epoch)
-    #     tf.summary.scalar('disc_whole_loss', disc_loss_whole, step=epoch)
-    #     tf.summary.scalar('disc_mask_loss', disc_loss_mask, step=epoch)
+    with summary_writer.as_default():
+        # tf.summary.scalar('gen_total_loss', gen_tot_loss, step=epoch)
+        tf.summary.scalar('gen_gan_loss', generator_loss, step=epoch)
+        # tf.summary.scalar('gen_rc_loss', rc_loss, step=epoch)
+        # tf.summary.scalar('gen_perc_loss', perc_loss, step=epoch)
+        tf.summary.scalar('disc_whole_loss', discriminator_loss, step=epoch)
+        tf.summary.scalar('disc_mask_loss', disc_loss_mask, step=epoch)
 
 checkpoint_dir = '.\\Checkpoints\\GAN\\se'
 checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
@@ -154,7 +157,7 @@ if ckpt_manager.latest_checkpoint:
 else:
     print("Initializing from scratch.")
 
-def fit(train_ds, epochs, test_ds):
+def fit(train_ds, epochs, test_ds, score_writer):
     # first_epochs = int(round(epochs * 0.25))
     for epoch in range(epochs):
     #     if epoch < first_epochs:
@@ -169,12 +172,12 @@ def fit(train_ds, epochs, test_ds):
         for n, (input_image, input_map, target) in train_ds.enumerate():
             counter+=1
             print(str(counter), end=' ', flush=True)
-            # if epoch < first_epochs:
-            #     first_train_step(input_image, input_map, target, epoch, n)
-            # else:
-            second_train_step(input_image, input_map, target, epoch, n)
+            if epoch < first_epochs:
+                first_train_step(input_image, input_map, target, epoch, n)
+            else:
+                second_train_step(input_image, input_map, target, epoch, n)
         for example_input, example_map, example_target in test_ds.take(1):
-            generate_images(gen, example_input, example_map, example_target, epoch)
+            generate_images(gen, example_input, example_map, example_target, epoch, score_writer)
         # saving (checkpoint) the model every 10 epochs
         if (epoch + 1) % 5 == 0:
             checkpoint.save(file_prefix=checkpoint_prefix)
@@ -182,25 +185,35 @@ def fit(train_ds, epochs, test_ds):
 
     checkpoint.save(file_prefix=checkpoint_prefix)
 
-def generate_images(model, test_input, test_map, tar, epoch):
+def generate_images(model, test_input, test_map, tar, epoch, score_writer):
     prediction = model([test_input, test_map], training=True)
-    score = tf.image.ssim(gen_output, Igt, max_val=2.0)
-    print(score)
-    
-    fig=plt.figure(figsize=(15, 15))
-    plt.suptitle("Epoch " + str(epoch+21))
+    score_SSIM = tf.image.ssim(prediction, tar, max_val=2.0)
+    score_PSNR = tf.image.psnr(prediction, tar, max_val=2.0)
+    np_score_PSNR=score_PSNR.numpy()
+    average_PSNR = np.average(np_score_PSNR)
+    np_score_SSIM=score_SSIM.numpy()
+    average_SSIM = np.average(np_score_SSIM)
+
+    score_writer.writerow([average_SSIM, average_PSNR])
+
+    fig=plt.figure(figsize=(15, 7.5))
+    fig.text(0.5, 0.15, "SSIM: " + str(np_score_SSIM[0]), fontsize=20, horizontalalignment="center")
+    fig.text(0.5, 0.1, "PSNR: " + str(np_score_PSNR[0]) + "dB", fontsize=20, horizontalalignment="center")
+    plt.suptitle("Epoch " + str(epoch+1), fontsize=20, ha="center")
     display_list = [test_input[0], tar[0], prediction[0]]
     title = ['Test Input', 'Ground Truth', 'Predicted Image']
     global count
-    stringa ="Risultati\\GAN\\20k_100epoch_se\\" + str(count) + ".png"
+    stringa ="Risultati\\GAN\\20k_100epoch_5l_bs16\\" + str(count) + ".png"
     count += 1
     for i in range(3):
         plt.subplot(1, 3, i+1)
-        plt.title(title[i])
+        plt.title(title[i], fontsize=16)
         # getting the pixel values between [0, 1] to plot it.
         plt.imshow(display_list[i] * 0.5 + 0.5)
         plt.axis('off')
     # plt.show()
     fig.savefig(stringa)
 
-fit(train_ds, EPOCHS, test_ds)
+with open("C:\\Users\\user\\Documents\\GitHub\\UnmaskingFace\\Grafici\\GAN\\File\\epoch6.csv", "w+") as csv_file:
+    score_writer = csv.writer(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+    fit(train_ds, EPOCHS, test_ds, score_writer)

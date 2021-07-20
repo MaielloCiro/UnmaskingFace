@@ -33,17 +33,26 @@ def denormalize(immagine):
 
 def generate_images(model, test_input, test_map, tar):
     prediction = model([test_input, test_map], training=False)
-    prediction = denormalize(prediction)
-    fig=plt.figure(figsize=(15, 15))
-    plt.suptitle("Test")
-    display_list = [test_input[0], tar[0], prediction[0]]
-    title = ['Test Input', 'Ground Truth', 'Predicted Image']
-    global counter
-    counter += 1
-    stringa ="C:\\Users\\user\\Documents\\GitHub\\UnmaskingFace\\Risultati\\GAN\\test100epoch_seed57\\" + str(counter) + ".png"
-    for i in range(3):
-        plt.subplot(1, 3, i+1)
-        plt.title(title[i])
+    score_SSIM = tf.image.ssim(prediction, tar, max_val=2.0)
+    score_PSNR = tf.image.psnr(prediction, tar, max_val=2.0)
+    index_SSIM = tf.argmax(score_SSIM)
+    index_PSNR = tf.argmax(score_PSNR)
+    np_score_PSNR=score_PSNR.numpy()
+    average_PSNR = np.average(np_score_PSNR)
+    np_score_SSIM=score_SSIM.numpy()
+    average_SSIM = np.average(np_score_SSIM)
+    fig=plt.figure(figsize=(30, 15))
+    fig.text(0.5, 0.07, "SSIM: " + str(np_score_SSIM[index_SSIM]), fontsize=28, horizontalalignment="center")
+    fig.text(0.5, 0.03, "PSNR: " + str(np_score_PSNR[index_PSNR]) + "dB", fontsize=28, horizontalalignment="center")
+    plt.suptitle("TEST", fontsize=40, ha="center")
+    display_list = [test_input[index_SSIM], tar[index_SSIM], prediction[index_SSIM], test_input[index_PSNR], tar[index_PSNR], prediction[index_PSNR]]
+    title = ['SSIM_Test Input', 'SSIM_Ground Truth', 'SSIM_Predicted Image','PSNR_Test Input', 'PSNR_Ground Truth', 'PSNR_Predicted Image']
+    global count
+    stringa ="Risultati\\GAN\\test\\" + str(count) + ".png"
+    count += 1
+    for i in range(6):
+        plt.subplot(2, 3, i+1)
+        plt.title(title[i], fontsize=22)
         # getting the pixel values between [0, 1] to plot it.
         plt.imshow(display_list[i] * 0.5 + 0.5)
         plt.axis('off')
@@ -51,9 +60,10 @@ def generate_images(model, test_input, test_map, tar):
     fig.savefig(stringa)
 
 
+
 # gen = tf.keras.models.load_model("generatore.h5")
 gen = generatore()
-checkpoint_dir = "C:\\Users\\user\\Documents\\GitHub\\UnmaskingFace\\Checkpoints\\GAN"
+checkpoint_dir = "C:\\Users\\user\\Documents\\GitHub\\UnmaskingFace\\Checkpoints\\GAN\\final_loss"
 checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
 checkpoint = tf.train.Checkpoint(generator=gen)
 ckpt_manager = tf.train.CheckpointManager(checkpoint, checkpoint_dir, max_to_keep=5)
@@ -86,7 +96,6 @@ testset = tf.data.Dataset.zip((imagesmask, imagesmap, imagesgt))
 count=1
 for n, (example_input, example_map, example_target) in testset.enumerate():
     print(count)
-    count += 1
     generate_images(gen, example_input, example_map, example_target)
 
 # generate_images(gen, X, Y, Z)

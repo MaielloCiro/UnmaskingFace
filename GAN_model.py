@@ -93,9 +93,15 @@ def generatore():
 
     up9 = Conv2DTranspose(64, 3, strides=(2, 2), padding='same')(conv8)#conv8
     merge9 = concatenate([conv1, up9])
-    conv9 = Conv2D(64, 3, activation='tanh', padding='same')(merge9)
-    conv9 = Conv2D(64, 3, activation='tanh', padding='same')(conv9)
-    conv9 = Conv2D(3, 3, activation='tanh', padding='same')(conv9)
+    conv9 = Conv2D(64, 3, padding='same')(merge9)#tanh
+    conv9 = LeakyReLU()(conv9)
+    conv9 = BatchNormalization()(conv9)
+    conv9 = Conv2D(64, 3, padding='same')(conv9)#tanh
+    conv9 = LeakyReLU()(conv9)
+    conv9 = BatchNormalization()(conv9)
+    conv9 = Conv2D(3, 3, padding='same')(conv9)#tanh
+    conv9 = LeakyReLU()(conv9)
+    conv9 = BatchNormalization()(conv9)
     conv9 = Conv2D(3, 1, activation='tanh')(conv9)
 
     generator = Model(inputs=[input_mask, input_map], outputs=conv9)
@@ -128,7 +134,6 @@ def disc_whole_region():
 
     zero_pad5 = ZeroPadding2D()(leaky_relu4)  # 17*17
     conv5 = Conv2D(1, 4, strides=1, kernel_initializer=initializer)(zero_pad5)  #14*14
-
     discriminator = Model(inputs=input, outputs=conv5)
     return discriminator
 
