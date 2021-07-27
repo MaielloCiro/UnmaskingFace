@@ -1,22 +1,24 @@
+'''
+Training Editing Module
+'''
+
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
-import csv
 import os
 import time
-import datetime
 import tensorflow.keras.backend as K
 from tensorflow.keras.utils import *
 from tensorflow.keras.models import *
 from tensorflow.keras.layers import *
 from tensorflow.keras.optimizers import *
-from tensorflow.keras.preprocessing import image_dataset_from_directory as idfd
 from PIL import Image
-from tensorflow.python.ops.gen_string_ops import as_string
-from GAN_model import *
+from editing_module_model import *
 from prepare_dataset import *
 
-#---------CODE TO AVOID OoM---------
+'''
+Code to avoid OoM
+'''
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
     try:
@@ -26,33 +28,40 @@ if gpus:
     except RuntimeError as e:
         print(e)
 
-#-------INIZIALIZATION VARIABLES----
-count = 0
+'''
+Variables and optimizers initialization 
+Loading models and dataset 
+'''
+count=1
 EPOCHS=100
-LAMBDA_whole = 0.3
-LAMBDA_mask = 0.7
-LAMBDArc = 100
+
 log_dir="C:\\Users\\user\\Documents\\GitHub\\UnmaskingFace\\logs\\"
 summary_writer = tf.summary.create_file_writer(log_dir + "fit/final_loss")
 
 gen = generatore()
-#gen.summary()
 disc_whole = disc_whole_region()
-# disc_whole.summary()
 disc_mask = disc_mask_region()
-# disc_mask.summary()
 vgg_model = vgg19_model()
 print("Modelli caricati")
 
 train_ds, test_ds = prepare_tf_GAN()
 print("Dati caricati")
 
-#---------PERCEPTUAL LOSS-----------
+cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+LAMBDA_whole = 0.3
+LAMBDA_mask = 0.7
+LAMBDA_rc = 100
+generator_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
+disc_whole_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
+disc_mask_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
+
+'''
+Definition of perceptual loss
+'''
 @tf.function
 def perceptual_loss(gen_image, gt_image):
     h1_list = vgg_model(gen_image)
     h2_list = vgg_model(gt_image)
-
     perc_loss = 0.0
     for h1, h2 in zip(h1_list, h2_list):
         h1 = K.batch_flatten(h1)
@@ -61,33 +70,33 @@ def perceptual_loss(gen_image, gt_image):
     perc_loss = tf.reduce_mean(perc_loss)
     return perc_loss
 
-#---------GAN LOSS------------------
-cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
-
+'''
+Definition of Non-Saturating loss for discriminator and generator
+'''
 def disc_loss(disc_real_output, disc_gen_output):
-    real_loss = cross_entropy(tf.ones_like(disc_real_output), disc_real_output) #parte reale
-    fake_loss = cross_entropy(tf.zeros_like(disc_gen_output), disc_gen_output) #parte generata
+    real_loss = cross_entropy(tf.ones_like(disc_real_output), disc_real_output) # Real samples
+    fake_loss = cross_entropy(tf.zeros_like(disc_gen_output), disc_gen_output) # Fake samples
     total_loss = (real_loss + fake_loss)
     return total_loss
 
 def gen_loss(disc_gen_output):
-    adv_loss = cross_entropy(tf.ones_like(disc_gen_output), disc_gen_output) #loss adversarial
+    adv_loss = cross_entropy(tf.ones_like(disc_gen_output), disc_gen_output) # Adversarial loss
     return adv_loss
 
+'''
+Definition of recostrunction loss
+'''
 def rec_loss(gen_output, Igt):
-    l1_loss = tf.reduce_mean(tf.abs(Igt - gen_output)) #loss L1
-    SSIM_loss = 1 - tf.reduce_mean(tf.image.ssim(gen_output, Igt, max_val=2.0)) #loss SSIM
+    l1_loss = tf.reduce_mean(tf.abs(Igt - gen_output)) # L1 loss
+    SSIM_loss = 1 - tf.reduce_mean(tf.image.ssim(gen_output, Igt, max_val=2.0)) # SSIM loss
     rc_loss = l1_loss + SSIM_loss
     return rc_loss
 
-generator_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
-disc_whole_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
-disc_mask_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
+'''
 
-print("Ottimizzatori caricati")
-
+'''
 @tf.function
-def first_train_step(input_image, input_map, Igt, epoch, n):
+def first_train_cycle(input_image, input_map, Igt, epoch, n):
     with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
         generated_image = gen([input_image, input_map], training=True)
 
@@ -98,7 +107,7 @@ def first_train_step(input_image, input_map, Igt, epoch, n):
         discriminator_loss = disc_loss(real_output, fake_output)
         rc_loss = rec_loss(generated_image, Igt)
         perc_loss = perceptual_loss(generated_image, Igt)
-        gen_tot_loss = LAMBDArc*(rc_loss + perc_loss) + generator_loss
+        gen_tot_loss = LAMBDA_rc*(rc_loss + perc_loss) + generator_loss
 
     gradients_of_generator = gen_tape.gradient(gen_tot_loss, gen.trainable_variables)
     gradients_of_disc_whole = disc_tape.gradient(discriminator_loss, disc_whole.trainable_variables)
@@ -113,8 +122,11 @@ def first_train_step(input_image, input_map, Igt, epoch, n):
         tf.summary.scalar('perceptual_loss', perc_loss, step=epoch)
         tf.summary.scalar('disc_whole_loss', discriminator_loss, step=epoch)
 
+'''
+
+'''
 @tf.function
-def second_train_step(input_image, input_map, Igt, epoch, n):
+def second_train_cycle(input_image, input_map, Igt, epoch, n):
     with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_whole_tape, tf.GradientTape() as disc_mask_tape:
         generated_image = gen([input_image, input_map], training=True)
 
@@ -129,7 +141,7 @@ def second_train_step(input_image, input_map, Igt, epoch, n):
         disc_loss_mask = LAMBDA_mask * disc_loss(real_output_mask, fake_output_mask)
         rc_loss = rec_loss(generated_image, Igt)
         perc_loss = perceptual_loss(generated_image, Igt)
-        gen_tot_loss = LAMBDArc*(rc_loss + perc_loss) + LAMBDA_whole*(gen_loss_whole) + LAMBDA_mask*(gen_loss_mask)
+        gen_tot_loss = LAMBDA_rc*(rc_loss + perc_loss) + LAMBDA_whole*(gen_loss_whole) + LAMBDA_mask*(gen_loss_mask)
 
     gradients_of_generator = gen_tape.gradient(gen_tot_loss, gen.trainable_variables)
     gradients_of_disc_whole = disc_whole_tape.gradient(disc_loss_whole, disc_whole.trainable_variables)
@@ -147,21 +159,12 @@ def second_train_step(input_image, input_map, Igt, epoch, n):
         tf.summary.scalar('disc_whole_loss', disc_loss_whole, step=epoch)
         tf.summary.scalar('disc_mask_loss', disc_loss_mask, step=epoch)
 
-#---------CHECKPOINT MANAGEMENT--------
-checkpoint_dir = '.\\Checkpoints\\GAN\\final_loss'
-checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
-checkpoint = tf.train.Checkpoint(generator_optimizer=generator_optimizer, disc_whole_optimizer=disc_whole_optimizer, disc_mask_optimizer=disc_mask_optimizer, generator=gen, disc_whole=disc_whole, disc_mask=disc_mask)
-ckpt_manager = tf.train.CheckpointManager(checkpoint, checkpoint_dir, max_to_keep=5)
-checkpoint.restore(ckpt_manager.latest_checkpoint)
-if ckpt_manager.latest_checkpoint:
-    print("Restored from {}".format(ckpt_manager.latest_checkpoint))
-else:
-    print("Initializing from scratch.")
-
-#---------TRAINING---------------------
+'''
+Training
+'''
 def fit(train_ds, epochs, test_ds):
-    first_epochs = int(round(epochs * 0.4))
-    for epoch in range(96, epochs):
+    first_epochs = int(round(epochs * 0.4)) # Variable to differentiate training
+    for epoch in range(0, epochs):
         if epoch < first_epochs:
             print("First training cycle")
         else:
@@ -170,18 +173,17 @@ def fit(train_ds, epochs, test_ds):
         start = time.time()
         print("Epoch: ", str(epoch+1))   
 
-        # Train
         for n, (input_image, input_map, target) in train_ds.enumerate():
             counter+=1
             print(str(counter), end=' ', flush=True)
             if epoch < first_epochs:
-                first_train_step(input_image, input_map, target, epoch, n)
+                first_train_cycle(input_image, input_map, target, epoch, n)
             else:
-                second_train_step(input_image, input_map, target, epoch, n)
+                second_train_cycle(input_image, input_map, target, epoch, n)
         for example_input, example_map, example_target in test_ds.take(1):
             generate_images(gen, example_input, example_map, example_target, epoch)
         # saving (checkpoint) the model every 5 epochs
-        if (epoch + 1) % 4 == 0:
+        if (epoch + 1) % 5 == 0:
             checkpoint.save(file_prefix=checkpoint_prefix)
             print("Checkpoint saved!")
 
@@ -189,7 +191,9 @@ def fit(train_ds, epochs, test_ds):
 
     checkpoint.save(file_prefix=checkpoint_prefix)
 
-#---------GENERATION OF IMAGES------
+'''
+
+'''
 def generate_images(model, test_input, test_map, tar, epoch):
     prediction = model([test_input, test_map], training=True)
     score_SSIM = tf.image.ssim(prediction, tar, max_val=2.0)
@@ -239,4 +243,20 @@ def generate_images(model, test_input, test_map, tar, epoch):
     # plt.show()
     fig.savefig(stringa)
 
+'''
+Checkpoint management
+'''
+checkpoint_dir = '.\\Checkpoints\\GAN\\final_loss'
+checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
+checkpoint = tf.train.Checkpoint(generator_optimizer=generator_optimizer, disc_whole_optimizer=disc_whole_optimizer, disc_mask_optimizer=disc_mask_optimizer, generator=gen, disc_whole=disc_whole, disc_mask=disc_mask)
+ckpt_manager = tf.train.CheckpointManager(checkpoint, checkpoint_dir, max_to_keep=5)
+checkpoint.restore(ckpt_manager.latest_checkpoint)
+if ckpt_manager.latest_checkpoint:
+    print("Restored from {}".format(ckpt_manager.latest_checkpoint))
+else:
+    print("Initializing from scratch.")
+
+'''
+Start training
+'''
 fit(train_ds, EPOCHS, test_ds)

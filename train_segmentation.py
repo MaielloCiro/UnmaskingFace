@@ -1,8 +1,15 @@
+'''
+Training Map Module
+'''
+
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from map_module_model import *
 from prepare_dataset import *
 
+'''
+Code to avoid OoM
+'''
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
     try:
@@ -12,14 +19,19 @@ if gpus:
     except RuntimeError as e:
         print(e)
 
-model = modello()
+'''
+Loading dataset and training
+'''
+model = seg_model()
 dataset, dataval = prepare_tf_segmentation()
 print("Caricati i dati")
 
-# cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath="C:\\Users\\user\\Documents\\GitHub\\UnmaskingFace\\Checkpoints\\cp{epoch:08d}.h5", save_weights_only=False, save_freq=5*500)
-history = model.fit(dataset, validation_data=dataval, epochs=20) #,callbacks=[cp_callback]
+history = model.fit(dataset, validation_data=dataval, epochs=20)
 model.save('segmentation_model_20k_20epoch.h5')
 
+'''
+Plotting Loss and Accuracy
+'''
 print(history.history.keys())
 plt.plot(history.history['accuracy'])
 plt.plot(history.history['val_accuracy'])
@@ -36,12 +48,3 @@ plt.ylabel('loss')
 plt.xlabel('epoch')
 plt.legend(['train', 'val'], loc='upper left')
 plt.show()
-
-# x_test = np.load("C:\\Users\\user\\Documents\\GitHub\\UnmaskingFace\\test_images.npy")
-# x_testgt = np.load("C:\\Users\\user\\Documents\\GitHub\\UnmaskingFace\\testgt_images.npy")
-# evaluation = model.evaluate(x_test, x_testgt)
-# print("%s: %.2f%%" % (model.metrics_names[1], evaluation[1]*100))
-
-# prediction = model.predict(x = x_test[0].reshape(1, 128, 128, 1)) #ci deve annà x_test
-# cv2.imshow("Output", prediction)
-# cv2.waitKey(0)
