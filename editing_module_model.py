@@ -23,6 +23,9 @@ def prepare_input_disc_mask(x):
     Imask_region = Add()([firstmul, secondmul])
     return Imask_region
 
+'''
+Squeeze and Excitation block (Computational troubles)
+'''
 def se_block(in_block, ch, ratio=16):
     x = GlobalAveragePooling2D()(in_block)
     x = Dense(ch//ratio, activation='relu')(x)
@@ -32,7 +35,7 @@ def se_block(in_block, ch, ratio=16):
 '''
 Generator
 '''
-def generatore():
+def generator():
     input_size = (128, 128, 3)
     
     input_mask = Input(input_size)
@@ -52,7 +55,7 @@ def generatore():
     conv2 = BatchNormalization()(conv2)
     pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
     pool2 = Dropout(0.5)(pool2)
-    # se = se_block(pool1, ch=1) Squeeze and Excitation block (Computational troubles)
+    # se = se_block(pool1, ch=1)
 
     conv3 = Conv2D(256, 3, padding='same', dilation_rate=(2, 2))(pool2)
     conv3 = LeakyReLU()(conv3)

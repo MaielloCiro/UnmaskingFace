@@ -1,5 +1,5 @@
 '''
-Script to create and filter sintetic maps
+Script to create and filter synthetic maps
 We also delete original images which were wrongly masked by MaskTheFace tool
 '''
 
@@ -53,6 +53,10 @@ def binarization(n, map): # n is arbitrary chosen after several tests
                 map[i, j] = 0
             else:
                 map[i, j] = 255
+				
+def filter(image):
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+    return cv2.morphologyEx(image, cv2.MORPH_OPEN, kernel) # Filter with erosion and dilation 
 
 imlist = find_path(images)
 imlist2 = find_path(images_masked)
@@ -71,8 +75,7 @@ for image in imlist:
         imMap = np.array(imMap)
         binarization(6, imMap)
         #cv2.imshow('Map with noise', imMap)
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-        openingMap = cv2.morphologyEx(imMap, cv2.MORPH_OPEN, kernel) # Filter with erosion and dilation 
+		openingMap = filter(imMap)
         cv2.imwrite('C:\\Users\\user\\Documents\\PoliTo\\2 anno 1 semestre\\Machine learning for vision and multimedia\\PROGETTO\\DATASET\\maps\\'+name+'.jpg', openingMap)
         #cv2.imshow('Erosion and dilation', openingMap)
         #cv2.waitKey(0)

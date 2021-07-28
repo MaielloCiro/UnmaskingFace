@@ -38,7 +38,7 @@ EPOCHS=100
 log_dir="C:\\Users\\user\\Documents\\GitHub\\UnmaskingFace\\logs\\"
 summary_writer = tf.summary.create_file_writer(log_dir + "fit/final_loss")
 
-gen = generatore()
+gen = generator()
 disc_whole = disc_whole_region()
 disc_mask = disc_mask_region()
 vgg_model = vgg19_model()
@@ -93,7 +93,8 @@ def rec_loss(gen_output, Igt):
     return rc_loss
 
 '''
-
+First part of training
+Training of generator, whole region discriminator and perceptual network
 '''
 @tf.function
 def first_train_cycle(input_image, input_map, Igt, epoch, n):
@@ -115,7 +116,7 @@ def first_train_cycle(input_image, input_map, Igt, epoch, n):
     generator_optimizer.apply_gradients(zip(gradients_of_generator, gen.trainable_variables))
     disc_whole_optimizer.apply_gradients(zip(gradients_of_disc_whole, disc_whole.trainable_variables))
 
-    with summary_writer.as_default():
+    with summary_writer.as_default(): # Plotting of losses with Tensorboard
         tf.summary.scalar('gan_loss', gen_tot_loss, step=epoch)
         tf.summary.scalar('generator_loss', generator_loss, step=epoch)
         tf.summary.scalar('reconstruction_loss', rc_loss, step=epoch)
@@ -123,7 +124,8 @@ def first_train_cycle(input_image, input_map, Igt, epoch, n):
         tf.summary.scalar('disc_whole_loss', discriminator_loss, step=epoch)
 
 '''
-
+Second part of training
+Training of generator, whole region discriminator, mask region discriminator and perceptual network
 '''
 @tf.function
 def second_train_cycle(input_image, input_map, Igt, epoch, n):
@@ -151,13 +153,66 @@ def second_train_cycle(input_image, input_map, Igt, epoch, n):
     disc_whole_optimizer.apply_gradients(zip(gradients_of_disc_whole, disc_whole.trainable_variables))
     disc_mask_optimizer.apply_gradients(zip(gradients_of_disc_mask, disc_mask.trainable_variables))
 
-    with summary_writer.as_default():
+    with summary_writer.as_default(): # Plotting of losses with Tensorboard
         tf.summary.scalar('gan_loss', gen_tot_loss, step=epoch)
         tf.summary.scalar('generator_loss', (gen_loss_mask+gen_loss_whole), step=epoch)
         tf.summary.scalar('reconstruction_loss', rc_loss, step=epoch)
         tf.summary.scalar('perceptual_loss', perc_loss, step=epoch)
         tf.summary.scalar('disc_whole_loss', disc_loss_whole, step=epoch)
         tf.summary.scalar('disc_mask_loss', disc_loss_mask, step=epoch)
+
+'''
+Generation of fake samples starting from testset
+Computation of average SSIM and PSNR for each epoch
+'''
+def generate_images(model, test_input, test_map, tar, epoch):
+    prediction = model([test_input, test_map], training=True)
+    score_SSIM = tf.image.ssim(prediction, tar, max_val=2.0)
+    score_PSNR = tf.image.psnr(prediction, tar, max_val=2.0)
+    np_score_PSNR=score_PSNR.numpy()
+    average_PSNR = np.average(np_score_PSNR)
+    np_score_SSIM=score_SSIM.numpy()
+    average_SSIM = np.average(np_score_SSIM)
+    with summary_writer.as_default(): # Plotting of metrics with Tensorboard
+        tf.summary.scalar('SSIM', average_SSIM, step=epoch)
+        tf.summary.scalar('PSNR', average_PSNR, step=epoch)
+    # Saving of first image of the batch (for each epoch) with corresponding SSIM and PSNR
+    fig=plt.figure(figsize=(15, 7.5))
+    fig.text(0.5, 0.15, "SSIM: " + str(np_score_SSIM[0]), fontsize=20, horizontalalignment="center")
+    fig.text(0.5, 0.1, "PSNR: " + str(np_score_PSNR[0]) + "dB", fontsize=20, horizontalalignment="center")
+    plt.suptitle("Epoch " + str(epoch+1), fontsize=20, ha="center")
+    display_list = [test_input[0], tar[0], prediction[0]]
+    title = ['Test Input', 'Ground Truth', 'Predicted Image']
+    global count
+    stringa ="Risultati\\GAN\\final_loss\\" + str(count) + ".png"
+    for i in range(3):
+        plt.subplot(1, 3, i+1)
+        plt.title(title[i], fontsize=16)
+        # Getting the pixel values between [0, 1] to plot it.
+        plt.imshow(display_list[i] * 0.5 + 0.5)
+        plt.axis('off')
+    # plt.show()
+    fig.savefig(stringa)
+    
+    # Saving of the image with the best SSIM and PSNR (for each epoch)
+    index_SSIM = tf.argmax(score_SSIM)
+    index_PSNR = tf.argmax(score_PSNR)
+    fig=plt.figure(figsize=(30, 15))
+    fig.text(0.5, 0.07, "SSIM: " + str(np_score_SSIM[index_SSIM]), fontsize=28, horizontalalignment="center")
+    fig.text(0.5, 0.03, "PSNR: " + str(np_score_PSNR[index_PSNR]) + "dB", fontsize=28, horizontalalignment="center")
+    plt.suptitle("Epoch " + str(epoch+1), fontsize=40, ha="center")
+    display_list = [test_input[index_SSIM], tar[index_SSIM], prediction[index_SSIM], test_input[index_PSNR], tar[index_PSNR], prediction[index_PSNR]]
+    title = ['SSIM_Test Input', 'SSIM_Ground Truth', 'SSIM_Predicted Image','PSNR_Test Input', 'PSNR_Ground Truth', 'PSNR_Predicted Image']
+    stringa ="Risultati\\GAN\\SSIM_PSNR\\" + str(count) + ".png"
+    count += 1
+    for i in range(6):
+        plt.subplot(2, 3, i+1)
+        plt.title(title[i], fontsize=22)
+        # Getting the pixel values between [0, 1] to plot it.
+        plt.imshow(display_list[i] * 0.5 + 0.5)
+        plt.axis('off')
+    # plt.show()
+    fig.savefig(stringa)
 
 '''
 Training
@@ -182,7 +237,7 @@ def fit(train_ds, epochs, test_ds):
                 second_train_cycle(input_image, input_map, target, epoch, n)
         for example_input, example_map, example_target in test_ds.take(1):
             generate_images(gen, example_input, example_map, example_target, epoch)
-        # saving (checkpoint) the model every 5 epochs
+        # Saving (checkpoint) the model every 5 epochs
         if (epoch + 1) % 5 == 0:
             checkpoint.save(file_prefix=checkpoint_prefix)
             print("Checkpoint saved!")
@@ -190,58 +245,6 @@ def fit(train_ds, epochs, test_ds):
         print ('Time taken for epoch {} is {} sec\n'.format(epoch + 1, time.time()-start))
 
     checkpoint.save(file_prefix=checkpoint_prefix)
-
-'''
-
-'''
-def generate_images(model, test_input, test_map, tar, epoch):
-    prediction = model([test_input, test_map], training=True)
-    score_SSIM = tf.image.ssim(prediction, tar, max_val=2.0)
-    score_PSNR = tf.image.psnr(prediction, tar, max_val=2.0)
-    np_score_PSNR=score_PSNR.numpy()
-    average_PSNR = np.average(np_score_PSNR)
-    np_score_SSIM=score_SSIM.numpy()
-    average_SSIM = np.average(np_score_SSIM)
-    with summary_writer.as_default():
-        tf.summary.scalar('SSIM', average_SSIM, step=epoch)
-        tf.summary.scalar('PSNR', average_PSNR, step=epoch)
-    #PLOT AND SAVING FIRST IMAGE OF BATCH
-    fig=plt.figure(figsize=(15, 7.5))
-    fig.text(0.5, 0.15, "SSIM: " + str(np_score_SSIM[0]), fontsize=20, horizontalalignment="center")
-    fig.text(0.5, 0.1, "PSNR: " + str(np_score_PSNR[0]) + "dB", fontsize=20, horizontalalignment="center")
-    plt.suptitle("Epoch " + str(epoch+1), fontsize=20, ha="center")
-    display_list = [test_input[0], tar[0], prediction[0]]
-    title = ['Test Input', 'Ground Truth', 'Predicted Image']
-    global count
-    stringa ="Risultati\\GAN\\final_loss\\" + str(count) + ".png"
-    for i in range(3):
-        plt.subplot(1, 3, i+1)
-        plt.title(title[i], fontsize=16)
-        # getting the pixel values between [0, 1] to plot it.
-        plt.imshow(display_list[i] * 0.5 + 0.5)
-        plt.axis('off')
-    # plt.show()
-    fig.savefig(stringa)
-    
-    #COMPUTATION OF MAX SSIM AND PSNR, AND SAVING
-    index_SSIM = tf.argmax(score_SSIM)
-    index_PSNR = tf.argmax(score_PSNR)
-    fig=plt.figure(figsize=(30, 15))
-    fig.text(0.5, 0.07, "SSIM: " + str(np_score_SSIM[index_SSIM]), fontsize=28, horizontalalignment="center")
-    fig.text(0.5, 0.03, "PSNR: " + str(np_score_PSNR[index_PSNR]) + "dB", fontsize=28, horizontalalignment="center")
-    plt.suptitle("Epoch " + str(epoch+1), fontsize=40, ha="center")
-    display_list = [test_input[index_SSIM], tar[index_SSIM], prediction[index_SSIM], test_input[index_PSNR], tar[index_PSNR], prediction[index_PSNR]]
-    title = ['SSIM_Test Input', 'SSIM_Ground Truth', 'SSIM_Predicted Image','PSNR_Test Input', 'PSNR_Ground Truth', 'PSNR_Predicted Image']
-    stringa ="Risultati\\GAN\\SSIM_PSNR\\" + str(count) + ".png"
-    count += 1
-    for i in range(6):
-        plt.subplot(2, 3, i+1)
-        plt.title(title[i], fontsize=22)
-        # getting the pixel values between [0, 1] to plot it.
-        plt.imshow(display_list[i] * 0.5 + 0.5)
-        plt.axis('off')
-    # plt.show()
-    fig.savefig(stringa)
 
 '''
 Checkpoint management

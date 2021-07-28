@@ -2,13 +2,18 @@ import tensorflow as tf
 from tensorflow.keras.utils import *
 from tensorflow.keras.models import *
 from tensorflow.keras.layers import *
-from GAN_model import *
+from editing_module_model import *
+from prepare_dataset import *
+from masked_map import filter
 import matplotlib.pyplot as plt
 import cv2
 import os
 from tensorflow.keras.preprocessing import *
 import os.path as osp
 
+'''
+Code to avoid OoM
+'''
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:
     try:
@@ -18,6 +23,10 @@ if gpus:
     except RuntimeError as e:
         print(e)
 
+'''
+Function to eliminate intermediate values
+and obtain only black and white values
+'''
 def binarization(n, map):
     for i in range(0, 128):
         for j in range(0, 128):
@@ -26,46 +35,9 @@ def binarization(n, map):
             else:
                 map[i, j] = 1
 
-def filter(image):
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-    return cv2.morphologyEx(image, cv2.MORPH_OPEN, kernel)
-
-def normalize_GAN(immagine):
-    immagine = (immagine / 127.5) - 1
-    return immagine
-
-def normalize_seg(immagine):
-    immagine = immagine / 255.0
-    return immagine
-
-def find_path(im):
-    try:
-        imlist = [osp.join(osp.realpath('.'), im, img) for img in os.listdir(im) if os.path.splitext(img)[1] ==
-                  '.png' or os.path.splitext(img)[1] == '.jpeg' or os.path.splitext(img)[1] == '.jpg']
-    except NotADirectoryError:
-        imlist = []
-        imlist.append(osp.join(osp.realpath('.'), im))
-    except FileNotFoundError:
-        print("No file or directory with the name {}".format(im))
-        exit()
-    return imlist
-
-count = 0
-gen = generatore()
-checkpoint_dir = "C:\\Users\\user\\Documents\\GitHub\\UnmaskingFace\\Checkpoints\\GAN\\final_loss"
-checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
-checkpoint = tf.train.Checkpoint(generator=gen)
-ckpt_manager = tf.train.CheckpointManager(checkpoint, checkpoint_dir, max_to_keep=5)
-checkpoint.restore(ckpt_manager.latest_checkpoint)
-if ckpt_manager.latest_checkpoint:
-    print("Restored from {}".format(ckpt_manager.latest_checkpoint))
-else:
-    print("Initializing from scratch.")
-
-seg_model = load_model("segmentation_model_20k_20epoch.h5")
-
-#----SEGMENTATION-----
-
+'''
+Segmentation
+'''
 def map_generation(images, names):
     prediction = seg_model.predict(x = images)
     count = 0
@@ -75,19 +47,11 @@ def map_generation(images, names):
         image = filter(image)
         image = image.reshape(128,128,1)
         tf.keras.preprocessing.image.save_img(stringa+names[count]+'.jpg', image)
-        count+=1
-    # example = np.asarray(example)
-    # example = example.reshape(128, 128, 1)
-    # stringa = "C:\\Users\\user\\Documents\\PoliTo\\2 anno 1 semestre\\Machine learning for vision and multimedia\\PROGETTO\\DATASET\\TEST\\145997_surgical_segmentation.jpg"
-    # fig = plt.figure(figsize=(10, 10))
-    # plt.subplot(1, 2, 1)
-    # plt.imshow(numpyimage)
-    # plt.title("Original")
-    # plt.subplot(1, 2, 2)
-    # plt.imshow(example, cmap='gray')
-    # plt.title("Segmentation")
-    # fig.savefig(stringa)    
+        count+=1  
 
+'''
+Generation synthetic unmasked images
+'''
 def generate_image(model, test_input, test_map, names):
     global count
     prediction = model([test_input, test_map], training=True)
@@ -99,7 +63,7 @@ def generate_image(model, test_input, test_map, names):
     for i in range(3):
         plt.subplot(1, 3, i+1)
         plt.title(title[i], fontsize=18)
-        # getting the pixel values between [0, 1] to plot it.
+        # Getting the pixel values between [0, 1] to plot it.
         if i == 1:
             plt.imshow(display_list[i], cmap = 'gray')
         else:
@@ -109,24 +73,24 @@ def generate_image(model, test_input, test_map, names):
     plt.close('all')
     count+=1
 
-dsize = (128, 128)
-path = "C:\\Users\\user\\Documents\\PoliTo\\2 anno 1 semestre\\Machine learning for vision and multimedia\\PROGETTO\\DATASET\\testmasked1k"
-mask = image_dataset_from_directory(path, image_size=(128, 128), color_mode='grayscale', label_mode=None, shuffle=False, interpolation="lanczos5", batch_size=16)
-imlist = find_path(path+"\\testsetmasked")
-names=[]
-for i in imlist:
-    i = i.split("\\")
-    name = i[-1]
-    name = name.split('_')
-    name = name[0]
-    names.append(name)
-mask_seg = mask.map(normalize_seg)
+'''
+Checkpoint and models restore
+'''
+seg_model = load_model("segmentation_model_20k_20epoch.h5")
+gen = generator()
+checkpoint_dir = "C:\\Users\\user\\Documents\\GitHub\\UnmaskingFace\\Checkpoints\\GAN\\final_loss"
+checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
+checkpoint = tf.train.Checkpoint(generator=gen)
+ckpt_manager = tf.train.CheckpointManager(checkpoint, checkpoint_dir, max_to_keep=5)
+checkpoint.restore(ckpt_manager.latest_checkpoint)
+if ckpt_manager.latest_checkpoint:
+    print("Restored from {}".format(ckpt_manager.latest_checkpoint))
+else:
+    print("Initializing from scratch.")
+
+count = 0
+names, mask_seg = prepare_tf_testseg()
 map_generation(mask_seg, names)
-mask = image_dataset_from_directory(path, image_size=(128, 128), label_mode=None, shuffle=False, interpolation="lanczos5", batch_size=16)
-mask_GAN = mask.map(normalize_GAN)
-pathmap = "C:\\Users\\user\\Documents\\PoliTo\\2 anno 1 semestre\\Machine learning for vision and multimedia\\PROGETTO\\DATASET\\TEST_MAP"
-map = image_dataset_from_directory(pathmap, image_size=(128, 128), color_mode='grayscale', label_mode=None, shuffle=False, interpolation="lanczos5", batch_size=16)
-map = map.map(normalize_GAN)
-testset = tf.data.Dataset.zip((mask_GAN,map))
+testset = prepare_tf_testset()
 for n, (example_input, example_map) in testset.enumerate():
     generate_image(gen, example_input, example_map, names)
