@@ -1,3 +1,7 @@
+'''
+Testing whole architecture
+'''
+
 import tensorflow as tf
 from tensorflow.keras.utils import *
 from tensorflow.keras.models import *
@@ -6,7 +10,6 @@ from editing_module_model import *
 from prepare_dataset import *
 from masked_map import filter
 import matplotlib.pyplot as plt
-import cv2
 import os
 from tensorflow.keras.preprocessing import *
 import os.path as osp
@@ -91,6 +94,8 @@ else:
 count = 0
 names, mask_seg = prepare_tf_testseg()
 map_generation(mask_seg, names)
+print("Segmentation of masks: DONE")
 testset = prepare_tf_testset()
 for n, (example_input, example_map) in testset.enumerate():
     generate_image(gen, example_input, example_map, names)
+print("Generation of synthetical images: DONE")

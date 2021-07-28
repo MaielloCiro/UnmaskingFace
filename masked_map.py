@@ -75,7 +75,7 @@ for image in imlist:
         imMap = np.array(imMap)
         binarization(6, imMap)
         #cv2.imshow('Map with noise', imMap)
-		openingMap = filter(imMap)
+        openingMap = filter(imMap)
         cv2.imwrite('C:\\Users\\user\\Documents\\PoliTo\\2 anno 1 semestre\\Machine learning for vision and multimedia\\PROGETTO\\DATASET\\maps\\'+name+'.jpg', openingMap)
         #cv2.imshow('Erosion and dilation', openingMap)
         #cv2.waitKey(0)
