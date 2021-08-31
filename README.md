@@ -23,3 +23,6 @@ Here we'll report some results.
 As you can see, the results can be considered more than acceptable even taking into account that our resources were limited and our dataset, created by ourselves, was too homogeneous.
 As a matter of fact, the model is affected by overfitting and it does not generalize properly.
 This problem could have been solved making the dataset more heterogeneous.
+
+## Try me
+In order to test the model, execute the file [trial.py](https://github.com/MaielloCiro/UnmaskingFace/blob/main/trial.py). This file will take all the required images the model needs (masked images) from the directory [TestSet/testmasked1k](https://google.it); firstly, it will generate the maps from the masked images and will save them in [TestSet/test_map](ciao.com); afterwards, it uses these maps for the editing module, and it generates the unmasked images, saved in [TestSet/Results] 
