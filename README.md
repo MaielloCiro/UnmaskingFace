@@ -19,3 +19,7 @@ Here we'll report some results.
 ![Esempio1](https://github.com/MaielloCiro/UnmaskingFace/blob/main/Risultati/039733.png "Esempio 1")
 ![Esempio2](https://github.com/MaielloCiro/UnmaskingFace/blob/main/Risultati/039740.png "Esempio 2")
 ![Esempio3](https://github.com/MaielloCiro/UnmaskingFace/blob/main/Risultati/039743.png "Esempio 3")
+
+As you can see, the results can be considered more than acceptable even taking into account that our resources were limited and our dataset, created by ourselves, was too homogeneous.
+As a matter of fact, the model is affected by overfitting and it does not generalize properly.
+This problem could have been solved making the dataset more heterogeneous.
