@@ -6,13 +6,20 @@ import tensorflow as tf
 from tensorflow.keras.preprocessing import *
 from masked_map import find_path
 
+'''
+Training directories
+'''
 dsize = (128, 128)
 images = "C:\\Users\\user\\Documents\\PoliTo\\2 anno 1 semestre\\Machine learning for vision and multimedia\\PROGETTO\\DATASET\\masks"
 images_map = "C:\\Users\\user\\Documents\\PoliTo\\2 anno 1 semestre\\Machine learning for vision and multimedia\\PROGETTO\\DATASET\\maps"
 images_GAN_gt = "C:\\Users\\user\\Documents\\PoliTo\\2 anno 1 semestre\\Machine learning for vision and multimedia\\PROGETTO\\DATASET\\no_masks"
 
-path_test = "C:\\Users\\user\\Documents\\PoliTo\\2 anno 1 semestre\\Machine learning for vision and multimedia\\PROGETTO\\DATASET\\testmasked1k"
-path_test_map = "C:\\Users\\user\\Documents\\PoliTo\\2 anno 1 semestre\\Machine learning for vision and multimedia\\PROGETTO\\DATASET\\TEST_MAP"
+'''
+Testing directories
+'''
+path_test = "TestSet\\testmasked1k"
+path_test_map = "TestSet\\test_map"
+path_test_gt = "TestSet\\testgt1k"
 
 def normalize_seg(immagine): # Normalization between 0 and 1
     immagine = immagine / 255.0
@@ -68,7 +75,9 @@ def prepare_tf_testseg():
 def prepare_tf_testset():
 	map = image_dataset_from_directory(path_test_map, image_size=dsize, color_mode='grayscale', label_mode=None, shuffle=False, interpolation="lanczos5", batch_size=16)
 	mask_GAN = image_dataset_from_directory(path_test, image_size=dsize, label_mode=None, shuffle=False, interpolation="lanczos5", batch_size=16)
+	# gt_GAN = image_dataset_from_directory(path_test_gt, image_size=dsize, label_mode=None, shuffle=False, interpolation="lanczos5", batch_size=16)
 	map = map.map(normalize_GAN)
 	mask_GAN = mask_GAN.map(normalize_GAN)
+	# gt_GAN = gt_GAN.map(normalize_GAN)
 	testset = tf.data.Dataset.zip((mask_GAN,map))
 	return testset
