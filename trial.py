@@ -91,7 +91,7 @@ def compute_metrics(model, test_input, test_map, tar):
 '''
 Checkpoint and models restore
 '''
-seg_model = load_model("segmentation_model_20k_20epoch.h5")
+seg_model = load_model("Checkpoints\\Segmentation\\segmentation_model_20k_20epoch.h5")
 gen = generator()
 checkpoint_dir = "Checkpoints\\GAN\\final_loss"
 checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
